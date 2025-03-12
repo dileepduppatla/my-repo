@@ -1,10 +1,17 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:latest'
-        }
+    agent any
+
+    environment {
+        DOCKER_USER = credentials('docker-username')
+        DOCKER_PASS = credentials('docker-password')
     }
+
     stages {
+        stage('Clone Repository') {
+            steps {
+                git 'https://github.com/your-repo.git'
+            }
+        }
         stage('Build') {
             steps {
                 sh 'echo Building the project...'
@@ -15,9 +22,21 @@ pipeline {
                 sh 'echo Running tests...'
             }
         }
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t myapp:latest .'
+            }
+        }
+        stage('Push to Docker Hub') {
+            steps {
+                sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
+                sh 'docker tag myapp:latest myrepo/myapp:latest'
+                sh 'docker push myrepo/myapp:latest'
+            }
+        }
         stage('Deploy') {
             steps {
-                sh 'echo Deploying the application...'
+                sh 'docker run -d -p 8080:8080 myrepo/myapp:latest'
             }
         }
     }
